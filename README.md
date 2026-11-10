@@ -14,3 +14,10 @@ A responsive order ledger for desktop and phone. Orders are stored in Supabase a
 4. Download JSON backups regularly from **Backup & export**.
 
 The site is mobile-friendly and uses dark mode by default. No example customer data is included.
+
+
+## Optional message extraction (Groq)
+
+The Orders page can extract directly stated fields from a pasted customer message. Extraction runs only after you click **Extract fields** and requires a signed-in session. Existing non-empty fields are left unchanged, unclear details are returned blank, and the order is never saved automatically. Review all extracted values before saving. The pasted text is sent to Groq for inference and is not stored by this app or added to order notes.
+
+To enable it, add `GROQ_API_KEY` as a **Production** environment variable in Vercel, then redeploy. Keep the key out of `config.js`, the browser, and GitHub. Without the key, all other tracker functions continue to work. Groq model output can be wrong; verify customer details and payment claims against the conversation and independent payment evidence.
