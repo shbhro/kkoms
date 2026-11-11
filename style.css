@@ -19,3 +19,7 @@ button,input,select,textarea{transition:border-color .15s,background-color .15s,
 button:active{transform:scale(.97)}
 tr.flash td{animation:flashRow 1.2s ease-out}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+#address,#orderNotes{overflow:hidden;min-height:4.2em}
+.suggest{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.suggest-item{text-align:left;padding:8px 10px;font-size:14px;border-radius:8px;background:var(--panel2)}

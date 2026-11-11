@@ -80,3 +80,15 @@ export function autoStatus(o) {
   const t = totals(o);
   return t.product > 0 && t.paid >= t.required && ["Inquiry", "Awaiting advance"].includes(o.status) ? "Advance paid" : o.status;
 }
+// Saved product names containing every typed word; names starting with the typed text come first. Max 6.
+export function matchProducts(names, typed) {
+  const t = String(typed || "")
+      .trim()
+      .toLowerCase(),
+    words = t.split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return names
+    .filter((p) => p.toLowerCase() !== t && words.every((w) => p.toLowerCase().includes(w)))
+    .sort((a, b) => Number(b.toLowerCase().startsWith(t)) - Number(a.toLowerCase().startsWith(t)))
+    .slice(0, 6);
+}

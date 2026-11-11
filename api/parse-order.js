@@ -82,8 +82,10 @@ module.exports = async function handler(req, res) {
     const clean = {};
     for (const name of ALLOWED) {
       const value = extracted[name];
-      clean[name] = typeof value === "string" && value.trim() ? value.trim() : null;
+      // The model sometimes returns the text "null" instead of JSON null.
+      clean[name] = typeof value === "string" && value.trim() && !/^(null|none|n\/a|undefined)$/i.test(value.trim()) ? value.trim() : null;
     }
+    if (clean.bkashDigits !== null) clean.bkashDigits = clean.bkashDigits.replace(/\D/g, "").slice(-8) || null;
     if (clean.platform && !["Facebook", "Instagram"].includes(clean.platform)) clean.platform = null;
     if (clean.deliveryArea && !["inside", "outside"].includes(clean.deliveryArea.toLowerCase())) clean.deliveryArea = null;
     else if (clean.deliveryArea) clean.deliveryArea = clean.deliveryArea.toLowerCase();

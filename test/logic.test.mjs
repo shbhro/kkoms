@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { totals, customerGroups, normalizedPhone, csv, safeCell, needsAdvance, autoStatus } from "../logic.mjs";
+import { totals, customerGroups, normalizedPhone, csv, safeCell, needsAdvance, autoStatus, matchProducts } from "../logic.mjs";
 
 test("totals: 50% advance on product only, delivery added", () => {
   const t = totals({ productTotal: 1000, deliveryArea: "inside", advancePaid: 200 });
@@ -36,4 +36,12 @@ test("needsAdvance / autoStatus", () => {
   assert.equal(autoStatus({ ...o, advancePaid: 500 }), "Advance paid");
   assert.equal(autoStatus({ ...o, advancePaid: 500, status: "Delivered" }), "Delivered");
   assert.equal(needsAdvance({ ...o, status: "Cancelled" }), false);
+});
+
+test("matchProducts matches all words anywhere, prefix first, hides exact", () => {
+  const names = ["Blue Totoro Plush", "Totoro Keychain", "Hello Kitty Bag"];
+  assert.deepEqual(matchProducts(names, "toto"), ["Totoro Keychain", "Blue Totoro Plush"]);
+  assert.deepEqual(matchProducts(names, "plush blue"), ["Blue Totoro Plush"]);
+  assert.deepEqual(matchProducts(names, "totoro keychain"), []);
+  assert.deepEqual(matchProducts(names, "  "), []);
 });

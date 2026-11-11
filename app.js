@@ -8,6 +8,7 @@ import {
   normalizedUsername,
   customerGroups as groupOrders,
   csv,
+  matchProducts,
   needsAdvance,
   autoStatus,
 } from "./logic.mjs";
@@ -27,7 +28,8 @@ const $ = (id) => document.getElementById(id),
     globalThis.crypto?.randomUUID
       ? crypto.randomUUID()
       : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-let flashId = "",
+let productNames = [],
+  flashId = "",
   allOrders = [],
   channel = null,
   realtimeOk = false,
@@ -63,6 +65,7 @@ function toast(s, undo) {
   toastTimer = setTimeout(() => t.classList.remove("show"), undo ? 8000 : 3200);
 }
 function showPage(n) {
+  setTimeout(growAll, 0);
   document.querySelectorAll(".page").forEach((x) => x.classList.toggle("active", x.id === n + "Page"));
   document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x.dataset.page === n));
 }
@@ -294,11 +297,8 @@ function render() {
       .join("") || '<tr><td class="empty" colspan="12">No matching orders.</td></tr>';
   // Suggest previously used product names (newest first, case-insensitive unique).
   const seen = new Set();
-  $("productList").innerHTML = orders
-    .map((o) => (o.product || "").trim())
-    .filter((p) => p && !seen.has(p.toLowerCase()) && seen.add(p.toLowerCase()))
-    .map((p) => '<option value="' + esc(p) + '">')
-    .join("");
+  productNames = orders.map((o) => (o.product || "").trim()).filter((p) => p && !seen.has(p.toLowerCase()) && seen.add(p.toLowerCase()));
+  showSuggestions();
   updatePreview();
   renderCustomers();
   updateDuplicateWarning();
@@ -371,6 +371,23 @@ async function saveRow(o) {
     if (error) throw error;
   }
 }
+// Inline list of saved product names matching every typed word (prefix matches first).
+function showSuggestions() {
+  const box = $("productSuggest"),
+    hits = matchProducts(productNames, $("product").value);
+  box.innerHTML = hits
+    .map((p) => '<button type="button" class="suggest-item" data-product="' + esc(p) + '">' + esc(p) + "</button>")
+    .join("");
+  box.classList.toggle("hidden", !hits.length);
+}
+// Grow a textarea to fit its text so long addresses are fully visible, esp. on phones.
+function growAll() {
+  for (const id of ["address", "orderNotes"]) {
+    const el = $(id);
+    el.style.height = "auto";
+    if (el.scrollHeight) el.style.height = el.scrollHeight + "px";
+  }
+}
 function clearForm() {
   editingId = "";
   editingBaseRevision = null;
@@ -384,6 +401,8 @@ function clearForm() {
   $("cancelEdit").classList.add("hidden");
   updatePreview();
   updateDuplicateWarning();
+  showSuggestions();
+  growAll();
 }
 function edit(id) {
   const o = orders.find((x) => x.id === id);
@@ -413,6 +432,8 @@ function edit(id) {
   showPage("orders");
   updatePreview();
   updateDuplicateWarning();
+  showSuggestions();
+  growAll();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 async function saveOrder(e) {
@@ -740,7 +761,7 @@ async function extractMessage() {
       skipped = 0;
     for (const [name, id] of Object.entries(ids)) {
       const value = result.fields?.[name];
-      if (value === null || value === undefined || value === "") continue;
+      if (value === null || value === undefined || value === "" || /^(null|none|n\/a|undefined)$/i.test(String(value).trim())) continue;
       const input = $(id),
         isUntouchedDefault =
           !touchedFields.has(id) &&
@@ -752,6 +773,7 @@ async function extractMessage() {
         continue;
       }
       input.value = String(value);
+      if (input.tagName === "TEXTAREA") growAll();
       filled++;
     }
     // A stated payment ("paid: 500") means the advance is in; only move early-stage orders forward.
@@ -792,8 +814,18 @@ async function init() {
     render();
   });
   $("orderForm").addEventListener("submit", saveOrder);
+  $("productSuggest").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-product]");
+    if (!b) return;
+    $("product").value = b.dataset.product;
+    touchedFields.add("product");
+    showSuggestions();
+  });
+  window.addEventListener("resize", growAll);
   $("orderForm").addEventListener("input", (e) => {
     if (e.target.id) touchedFields.add(e.target.id);
+    if (e.target.id === "product") showSuggestions();
+    if (e.target.tagName === "TEXTAREA") growAll();
     if (e.target.id === "phone" || e.target.id === "username") updateDuplicateWarning();
   });
   $("orderForm").addEventListener("change", (e) => {
