@@ -292,6 +292,13 @@ function render() {
         );
       })
       .join("") || '<tr><td class="empty" colspan="12">No matching orders.</td></tr>';
+  // Suggest previously used product names (newest first, case-insensitive unique).
+  const seen = new Set();
+  $("productList").innerHTML = orders
+    .map((o) => (o.product || "").trim())
+    .filter((p) => p && !seen.has(p.toLowerCase()) && seen.add(p.toLowerCase()))
+    .map((p) => '<option value="' + esc(p) + '">')
+    .join("");
   updatePreview();
   renderCustomers();
   updateDuplicateWarning();
