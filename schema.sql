@@ -23,3 +23,10 @@ create policy "Owner can update orders" on public.orders
 drop policy if exists "Owner can delete orders" on public.orders;
 create policy "Owner can delete orders" on public.orders
   for delete to authenticated using (auth.uid() = owner_id);
+
+-- Optional: instant sync across devices (Supabase Realtime). Safe to re-run; without it the app falls back to polling.
+do $$ begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'orders') then
+    alter publication supabase_realtime add table public.orders;
+  end if;
+end $$;
