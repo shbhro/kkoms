@@ -9,6 +9,9 @@ import {
   customerGroups as groupOrders,
   csv,
   matchProducts,
+  sortOrders,
+  groupByMonth,
+  monthOf,
   needsAdvance,
   autoStatus,
 } from "./logic.mjs";
@@ -215,6 +218,49 @@ function openDuplicateHistory() {
   renderCustomers();
   $("customerHistory").scrollIntoView({ behavior: "smooth", block: "start" });
 }
+const monthLabel = (m) => (m ? new Date(m + "-01T00:00").toLocaleString("en", { month: "long", year: "numeric" }) : "No date");
+function fillMonthSelect() {
+  const sel = $("allMonth"),
+    prev = sel.value,
+    months = [...new Set(orders.map(monthOf).filter(Boolean))].sort().reverse();
+  sel.innerHTML =
+    '<option value="">All months</option>' + months.map((m) => '<option value="' + m + '">' + esc(monthLabel(m)) + "</option>").join("");
+  sel.value = months.includes(prev) ? prev : "";
+}
+function orderTable(list) {
+  const rows = list
+    .map((o) => {
+      const t = totals(o),
+        actions =
+          '<div class="row-actions"><button data-edit="' +
+          esc(o.id) +
+          '">Edit</button><button data-delete="' +
+          esc(o.id) +
+          '">Delete</button></div>';
+      return (
+        (o.id === flashId ? '<tr class="flash">' : "<tr>") +
+        td("Date", esc(o.orderDate || "")) +
+        td("Customer", esc(customer(o)) + (o.username ? '<br><span class="muted">@' + esc(o.username) + "</span>" : "")) +
+        td("Phone", esc(o.phone || "")) +
+        td("Product", esc(o.product || "")) +
+        td("Qty", esc(o.quantity || "")) +
+        td("Product total", money(t.product), "num") +
+        td("Delivery", money(t.ship), "num") +
+        td("Advance due", money(t.advanceDue), "num") +
+        td("Paid advance", money(t.paid), "num") +
+        td("Balance due", money(t.balance), "num") +
+        td("Status", '<span class="badge">' + esc(o.status || "") + "</span>") +
+        td("Actions", actions) +
+        "</tr>"
+      );
+    })
+    .join("");
+  return (
+    '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Phone</th><th>Product</th><th>Qty</th><th>Product total</th><th>Delivery</th><th>Advance due</th><th>Paid advance</th><th>Balance due</th><th>Status</th><th>Actions</th></tr></thead><tbody>' +
+    (rows || '<tr><td class="empty" colspan="12">No orders yet.</td></tr>') +
+    "</tbody></table></div>"
+  );
+}
 function render() {
   const os = current();
   let product = 0,
@@ -241,28 +287,13 @@ function render() {
     card("Paid advance", paid) +
     card("Advance still due", advance) +
     card("Balance due", balance);
-  $("summaryOrderRows").innerHTML =
-    os
-      .map((o) => {
-        const t = totals(o);
-        return (
-          "<tr>" +
-          td("Date", esc(o.orderDate || "")) +
-          td("Customer", esc(customer(o))) +
-          td("Product", esc(o.product || "")) +
-          td("Qty", esc(o.quantity || "")) +
-          td("Order total", money(t.total), "num") +
-          td("Paid advance", money(t.paid), "num") +
-          td("Balance due", money(t.balance), "num") +
-          td("Status", '<span class="badge">' + esc(o.status || "") + "</span>") +
-          "</tr>"
-        );
-      })
-      .join("") || '<tr><td class="empty" colspan="8">No orders for this month yet.</td></tr>';
+  fillMonthSelect();
   const q = $("orderSearch").value.toLowerCase(),
     sf = $("statusFilter").value,
-    vis = (q ? orders : os)
+    mf = $("allMonth").value,
+    vis = orders
       .filter((o) => [o.customerName, o.username, o.phone, o.product].join(" ").toLowerCase().includes(q))
+      .filter((o) => !mf || monthOf(o) === mf)
       .filter((o) =>
         !sf
           ? true
@@ -272,34 +303,22 @@ function render() {
               ? totals(o).balance > 0 && o.status !== "Cancelled"
               : o.status === sf,
       );
-  $("orderRows").innerHTML =
-    vis
-      .map((o) => {
-        const t = totals(o),
-          actions =
-            '<div class="row-actions"><button data-edit="' +
-            esc(o.id) +
-            '">Edit</button><button data-delete="' +
-            esc(o.id) +
-            '">Delete</button></div>';
-        return (
-          (o.id === flashId ? '<tr class="flash">' : "<tr>") +
-          td("Date", esc(o.orderDate || "")) +
-          td("Customer", esc(customer(o)) + (o.username ? '<br><span class="muted">@' + esc(o.username) + "</span>" : "")) +
-          td("Phone", esc(o.phone || "")) +
-          td("Product", esc(o.product || "")) +
-          td("Qty", esc(o.quantity || "")) +
-          td("Product total", money(t.product), "num") +
-          td("Delivery", money(t.ship), "num") +
-          td("Advance due", money(t.advanceDue), "num") +
-          td("Paid advance", money(t.paid), "num") +
-          td("Balance due", money(t.balance), "num") +
-          td("Status", '<span class="badge">' + esc(o.status || "") + "</span>") +
-          td("Actions", actions) +
-          "</tr>"
-        );
-      })
-      .join("") || '<tr><td class="empty" colspan="12">No matching orders.</td></tr>';
+  $("allList").innerHTML =
+    groupByMonth(sortOrders(vis, $("sortBy").value))
+      .map(
+        (g) =>
+          '<div class="panel"><div class="panel-heading"><h3>' +
+          esc(monthLabel(g.month)) +
+          " · " +
+          g.orders.length +
+          " order" +
+          (g.orders.length === 1 ? "" : "s") +
+          "</h3></div>" +
+          orderTable(g.orders) +
+          "</div>",
+      )
+      .join("") || '<div class="panel"><p class="empty">No matching orders.</p></div>';
+  $("recentList").innerHTML = orderTable(sortOrders(orders, "recent").slice(0, 5));
   // Suggest previously used product names (newest first, case-insensitive unique).
   const seen = new Set();
   productNames = orders.map((o) => (o.product || "").trim()).filter((p) => p && !seen.has(p.toLowerCase()) && seen.add(p.toLowerCase()));
@@ -443,23 +462,25 @@ function edit(id) {
 }
 async function saveOrder(e) {
   e.preventDefault();
-  const o = {
-    id: editingId || makeId(),
-    orderDate: $("orderDate").value,
-    platform: $("platform").value,
-    customerName: $("customerName").value.trim(),
-    username: $("username").value.trim().replace(/^@/, ""),
-    phone: $("phone").value.trim(),
-    address: $("address").value.trim(),
-    product: $("product").value.trim(),
-    quantity: Number($("quantity").value) || 1,
-    productTotal: Number($("productTotal").value) || 0,
-    deliveryArea: $("deliveryArea").value,
-    advancePaid: Number($("advancePaid").value) || 0,
-    bkashDigits: lastDigits($("bkashDigits").value),
-    status: $("status").value,
-    notes: $("orderNotes").value.trim(),
-  };
+  const prev = editingId ? allOrders.find((x) => x.id === editingId) : null,
+    o = {
+      id: editingId || makeId(),
+      createdAt: prev ? prev.createdAt || prev._updatedAt || new Date().toISOString() : new Date().toISOString(),
+      orderDate: $("orderDate").value,
+      platform: $("platform").value,
+      customerName: $("customerName").value.trim(),
+      username: $("username").value.trim().replace(/^@/, ""),
+      phone: $("phone").value.trim(),
+      address: $("address").value.trim(),
+      product: $("product").value.trim(),
+      quantity: Number($("quantity").value) || 1,
+      productTotal: Number($("productTotal").value) || 0,
+      deliveryArea: $("deliveryArea").value,
+      advancePaid: Number($("advancePaid").value) || 0,
+      bkashDigits: lastDigits($("bkashDigits").value),
+      status: $("status").value,
+      notes: $("orderNotes").value.trim(),
+    };
   if (o.status !== "Inquiry" && !o.deliveryArea) {
     toast("Choose inside or outside Dhaka.");
     return;
@@ -840,7 +861,7 @@ async function init() {
   $("extractMessageBtn").addEventListener("click", extractMessage);
   $("messagePaste").addEventListener("paste", () => setTimeout(extractMessage, 0));
   $("cancelEdit").addEventListener("click", clearForm);
-  $("statusFilter").addEventListener("change", render);
+  ["statusFilter", "sortBy", "allMonth"].forEach((id) => $(id).addEventListener("change", render));
   document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && load());
   $("orderSearch").addEventListener("input", render);
   $("customerSearch").addEventListener("input", () => {
@@ -856,7 +877,7 @@ async function init() {
   });
   $("duplicateHistoryBtn").addEventListener("click", openDuplicateHistory);
   ["productTotal", "advancePaid", "deliveryArea"].forEach((id) => $(id).addEventListener("input", updatePreview));
-  $("orderRows").addEventListener("click", (e) => {
+  document.querySelector("main").addEventListener("click", (e) => {
     const ed = e.target.closest("[data-edit]"),
       de = e.target.closest("[data-delete]");
     if (ed) edit(ed.dataset.edit);

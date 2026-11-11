@@ -92,3 +92,31 @@ export function matchProducts(names, typed) {
     .sort((a, b) => Number(b.toLowerCase().startsWith(t)) - Number(a.toLowerCase().startsWith(t)))
     .slice(0, 6);
 }
+
+export const monthOf = (o) => (o.orderDate || "").slice(0, 7);
+const nameKey = (o) => (o.customerName || o.displayName || o.username || "").trim().toLocaleLowerCase();
+const createdKey = (o) => o.createdAt || o._updatedAt || o.orderDate || "";
+// mode: "recent" (newest added first), "az" or "za" by customer name (unnamed orders always last).
+export function sortOrders(list, mode) {
+  const arr = list.slice(),
+    dir = mode === "za" ? -1 : 1;
+  if (mode === "az" || mode === "za") {
+    return arr.sort((a, b) => {
+      const x = nameKey(a),
+        y = nameKey(b);
+      if (!!x !== !!y) return x ? -1 : 1;
+      return dir * x.localeCompare(y) || createdKey(b).localeCompare(createdKey(a));
+    });
+  }
+  return arr.sort((a, b) => createdKey(b).localeCompare(createdKey(a)));
+}
+// Groups by order month, newest month first; orders without a date go last. Keeps the input order inside each month.
+export function groupByMonth(list) {
+  const by = new Map();
+  for (const o of list) {
+    const m = monthOf(o);
+    if (!by.has(m)) by.set(m, []);
+    by.get(m).push(o);
+  }
+  return [...by.keys()].sort((a, b) => (!a ? 1 : !b ? -1 : b.localeCompare(a))).map((month) => ({ month, orders: by.get(month) }));
+}

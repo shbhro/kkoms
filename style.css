@@ -23,3 +23,5 @@ tr.flash td{animation:flashRow 1.2s ease-out}
 #address,#orderNotes{overflow:hidden;min-height:4.2em}
 .suggest{display:flex;flex-direction:column;gap:4px;margin-top:6px}
 .suggest-item{text-align:left;padding:8px 10px;font-size:14px;border-radius:8px;background:var(--panel2)}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.filters .search{flex:1;min-width:150px;max-width:none}
+#allList .panel,#recentList{margin-bottom:14px}
