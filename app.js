@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "./vendor/supabase.js";
 import {
   DELIVERY,
   ADVANCE_RATE,
@@ -486,6 +486,7 @@ async function deleteOrder(id) {
     toast("Order changed on another device or could not be deleted. Review it and try again.");
     return;
   }
+  if (editingId === id) clearForm();
   toast("Order deleted.", async () => {
     toast((await setDeleted(id, false)) ? "Order restored." : "Could not restore the order.");
   });
@@ -757,7 +758,6 @@ async function init() {
   if (SUPABASE_URL.includes("YOUR_PROJECT_ID") || SUPABASE_PUBLISHABLE_KEY.includes("YOUR_SUPABASE")) {
     $("authMessage").textContent = "Setup needed: add your Supabase project URL and publishable key to config.js.";
     $("signInBtn").disabled = true;
-    $("signUpBtn").disabled = true;
     return;
   }
   sb = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -769,21 +769,6 @@ async function init() {
     $("authMessage").textContent = "Signing in…";
     const { error } = await sb.auth.signInWithPassword({ email: $("authEmail").value.trim(), password: $("authPassword").value });
     $("authMessage").textContent = error ? error.message : "";
-  });
-  $("signUpBtn").addEventListener("click", async () => {
-    const email = $("authEmail").value.trim(),
-      password = $("authPassword").value;
-    if (!email || password.length < 8) {
-      $("authMessage").textContent = "Enter your email and a password of at least 8 characters.";
-      return;
-    }
-    $("authMessage").textContent = "Creating account…";
-    const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin } });
-    $("authMessage").textContent = error
-      ? error.message
-      : data.session
-        ? "Account created; you are signed in."
-        : "Check your email to confirm the account, then sign in.";
   });
   $("signOutBtn").addEventListener("click", () => sb.auth.signOut());
   document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showPage(b.dataset.page)));

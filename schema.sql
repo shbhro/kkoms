@@ -30,3 +30,12 @@ do $$ begin
     alter publication supabase_realtime add table public.orders;
   end if;
 end $$;
+
+-- Closes public sign-ups (applied to the live project). To add a user: drop this trigger, create the user, re-run this block.
+create or replace function public.block_new_signups() returns trigger language plpgsql as $$
+begin
+  raise exception 'Sign-ups are closed.';
+end $$;
+revoke all on function public.block_new_signups() from public, anon, authenticated;
+drop trigger if exists block_new_signups on auth.users;
+create trigger block_new_signups before insert on auth.users for each row execute function public.block_new_signups();

@@ -8,7 +8,7 @@ A responsive order ledger for desktop and phone. Orders are stored in Supabase a
 
 ## First use
 
-1. Open the deployed Vercel site and create an account with your email and a strong password. Confirm your email if Supabase asks.
+1. Open the deployed Vercel site and sign in. Sign-ups are closed by a database trigger (`block_new_signups` on `auth.users`); to add a user, create it in the Supabase dashboard after running `drop trigger block_new_signups on auth.users;`, then re-create the trigger from `schema.sql`.
 2. Sign in on every device using that same account to see the same order list.
 3. Changes sync instantly when Realtime is enabled (run the last block of `schema.sql` once); otherwise the site polls every five seconds. If an order was edited on another device, your typed edits are kept and you choose whether to overwrite.
 4. Download JSON backups regularly from **Backup & export**.
