@@ -28,6 +28,11 @@ const $ = (id) => document.getElementById(id),
     globalThis.crypto?.randomUUID
       ? crypto.randomUUID()
       : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+// bKash sender digits: blank, or the last 3 digits (also cleans old "null" values).
+const lastDigits = (v) =>
+  String(v ?? "")
+    .replace(/\D/g, "")
+    .slice(-3);
 let productNames = [],
   flashId = "",
   allOrders = [],
@@ -423,7 +428,7 @@ function edit(id) {
   $("productTotal").value = o.productTotal ?? (Number(o.quantity) || 0) * (Number(o.unitPrice) || 0);
   $("deliveryArea").value = o.deliveryArea || "";
   $("advancePaid").value = o.advancePaid ?? 0;
-  $("bkashDigits").value = o.bkashDigits || "";
+  $("bkashDigits").value = lastDigits(o.bkashDigits);
   $("status").value = o.status || "Inquiry";
   $("orderNotes").value = o.notes || "";
   $("orderFormTitle").textContent = "Edit order";
@@ -451,7 +456,7 @@ async function saveOrder(e) {
     productTotal: Number($("productTotal").value) || 0,
     deliveryArea: $("deliveryArea").value,
     advancePaid: Number($("advancePaid").value) || 0,
-    bkashDigits: $("bkashDigits").value.trim(),
+    bkashDigits: lastDigits($("bkashDigits").value),
     status: $("status").value,
     notes: $("orderNotes").value.trim(),
   };
@@ -632,7 +637,7 @@ async function orderCsv() {
           t.paid,
           t.advanceDue,
           t.balance,
-          o.bkashDigits,
+          lastDigits(o.bkashDigits),
           o.status,
           o.notes,
         ];
