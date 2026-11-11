@@ -747,9 +747,13 @@ async function extractMessage() {
       input.value = String(value);
       filled++;
     }
+    // A stated payment ("paid: 500") means the advance is in; only move early-stage orders forward.
+    const paidStated = Number(result.fields?.advancePaid) > 0 && ["Inquiry", "Awaiting advance"].includes($("status").value);
+    if (paidStated) $("status").value = "Advance paid";
+    if (filled || paidStated) $("messagePaste").value = "";
     updatePreview();
     status.textContent = filled
-      ? `Filled ${filled} empty field${filled === 1 ? "" : "s"}. ${skipped ? `${skipped} existing field${skipped === 1 ? " was" : "s were"} left unchanged. ` : ""}Review every value, especially delivery area inferred from the address; nothing has been saved.`
+      ? `Filled ${filled} empty field${filled === 1 ? "" : "s"}. ${skipped ? `${skipped} existing field${skipped === 1 ? " was" : "s were"} left unchanged. ` : ""}Review every value, especially delivery area inferred from the address; nothing has been saved.${paidStated ? " Status set to Advance paid from the stated payment: verify it." : ""}`
       : "No unambiguous new details were found. Nothing was changed.";
   } catch (error) {
     status.textContent = error.message || "Extraction failed. Nothing was changed.";
