@@ -27,7 +27,8 @@ const $ = (id) => document.getElementById(id),
     globalThis.crypto?.randomUUID
       ? crypto.randomUUID()
       : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-let allOrders = [],
+let flashId = "",
+  allOrders = [],
   channel = null,
   realtimeOk = false,
   ticks = 0,
@@ -274,7 +275,7 @@ function render() {
             esc(o.id) +
             '">Delete</button></div>';
         return (
-          "<tr>" +
+          (o.id === flashId ? '<tr class="flash">' : "<tr>") +
           td("Date", esc(o.orderDate || "")) +
           td("Customer", esc(customer(o)) + (o.username ? '<br><span class="muted">@' + esc(o.username) + "</span>" : "")) +
           td("Phone", esc(o.phone || "")) +
@@ -442,7 +443,9 @@ async function saveOrder(e) {
   }
   try {
     await saveRow(o);
+    flashId = o.id;
     await load();
+    flashId = "";
     clearForm();
     toast("Order saved to the shared list." + (auto !== statusBefore ? ` Status set to "${auto}" (advance covered).` : ""));
     showPage("orders");

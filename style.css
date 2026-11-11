@@ -8,3 +8,14 @@
 .paste-panel label{display:block;margin-bottom:7px;font-size:13px;color:var(--muted)}.paste-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px}.paste-actions .muted{font-size:12px}
 
 .duplicate-warning{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0;padding:12px 14px;border:1px solid var(--warn);border-radius:10px;background:var(--panel2);color:var(--warn)}.duplicate-warning button{color:var(--text)}
+
+/* Light motion: CSS only, disabled for reduced-motion users. */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes flashRow{from{background:color-mix(in srgb,var(--accent),transparent 70%)}to{background:transparent}}
+.page.active{animation:fadeIn .18s ease-out}
+.toast.show{animation:toastIn .2s ease-out}
+button,input,select,textarea{transition:border-color .15s,background-color .15s,box-shadow .15s,transform .1s}
+button:active{transform:scale(.97)}
+tr.flash td{animation:flashRow 1.2s ease-out}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
